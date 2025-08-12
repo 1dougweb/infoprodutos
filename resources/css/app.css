@@ -1,0 +1,160 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* Estilos personalizados para o formulário de checkout */
+.price-details {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    border: 1px solid #dee2e6;
+}
+
+.price-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.price-row:last-child {
+    margin-bottom: 0;
+}
+
+.price-total {
+    border-top: 1px solid #dee2e6;
+    padding-top: 0.5rem;
+    font-weight: 600;
+}
+
+.card-brands {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.card-brand {
+    height: 24px;
+    width: auto;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.card-brand.active {
+    opacity: 1;
+}
+
+.input-with-icon {
+    position: relative;
+}
+
+.card-icon {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    pointer-events: none;
+}
+
+/* Correção do padding dos campos do cartão do Mercado Pago - Regras mais específicas */
+#form-checkout__cardNumber,
+#form-checkout__expirationDate,
+#form-checkout__securityCode {
+    padding: 0.375rem 0.75rem !important;
+    min-height: 38px !important;
+    line-height: 1.5 !important;
+    font-size: 1rem !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 0.375rem !important;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+    background-color: #fff !important;
+    color: #212529 !important;
+    font-family: inherit !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    display: block !important;
+}
+
+/* Regras ainda mais específicas para sobrescrever qualquer estilo inline */
+#form-checkout__cardNumber[style*="padding"],
+#form-checkout__expirationDate[style*="padding"],
+#form-checkout__securityCode[style*="padding"] {
+    padding: 0.375rem 0.75rem !important;
+}
+
+#form-checkout__cardNumber[style*="height"],
+#form-checkout__expirationDate[style*="height"],
+#form-checkout__securityCode[style*="height"] {
+    min-height: 38px !important;
+}
+
+#form-checkout__cardNumber:focus,
+#form-checkout__expirationDate:focus,
+#form-checkout__securityCode:focus {
+    border-color: #86b7fe !important;
+    outline: 0 !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+}
+
+/* Garantir que os campos do cartão tenham a mesma altura dos outros campos */
+.form-control,
+.form-select {
+    padding: 0.375rem 0.75rem;
+    min-height: 38px;
+    line-height: 1.5;
+    font-size: 1rem;
+}
+
+/* Estilos para o formulário PIX */
+#pix-qr-container {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 2rem;
+}
+
+#qr-code-container {
+    background: white !important;
+    border: 2px solid #dee2e6 !important;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .card-brands {
+        justify-content: center;
+    }
+    
+    .price-details {
+        margin-top: 1rem;
+    }
+}
+
+/* Regra adicional para garantir consistência visual */
+#card-panel .form-control,
+#card-panel .form-select,
+#card-panel #form-checkout__cardNumber,
+#card-panel #form-checkout__expirationDate,
+#card-panel #form-checkout__securityCode {
+    margin-bottom: 1rem;
+    border-radius: 0.375rem;
+    border: 1px solid #ced4da;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+#card-panel .form-control:focus,
+#card-panel .form-select:focus,
+#card-panel #form-checkout__cardNumber:focus,
+#card-panel #form-checkout__expirationDate:focus,
+#card-panel #form-checkout__securityCode:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}

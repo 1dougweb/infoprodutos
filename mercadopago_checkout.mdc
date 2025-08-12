@@ -1,0 +1,279 @@
+# MercadoPagoCheckout.mdc
+
+## Papel
+Este arquivo serve como única fonte de verdade para a geração, por parte do CursorAI, de fluxos de checkout com **Mercado Pago Orders API v1**, contemplando pagamento via cartão de crédito e via **PIX**.  
+Todas as snippets abaixo devem ser usadas **exatamente como estão**—nenhuma linha deve ser deletada ou movida para fora do bloco.
+
+## Escopo
+Um único bloco de código engloba:
+1. Requisições `cURL` completas (cartão e PIX).
+2. Exemplos das respectivas respostas JSON completas.
+3. Endpoint oficial de referência.
+
+---
+```text
+# Geral — endpoint-base
+https://api.mercadopago.com/v1/orders\
+
+# HEADER sempre
+-H 'Content-Type: application/json'
+-H 'X-Idempotency-Key: {uuid4}' \
+-H 'Authorization: Bearer {access_token}'
+
+# 1. Requisição — Cartão de crédito
+curl -X POST \
+    'https://api.mercadopago.com/v1/orders'\
+    -H 'Content-Type: application/json' \
+    -H 'X-Idempotency-Key: 0d5020ed-1af6-469c-ae06-c3bec19954bb' \
+    -H 'Authorization: Bearer TEST-758********96044-11********b5524115********f311b918********8502083' \
+    -d '{
+  "type": "online",
+  "external_reference": "ext_ref_1234",
+  "transactions": {
+    "payments": [
+      {
+        "amount": "24.90",
+        "payment_method": {
+          "id": "visa",
+          "type": "credit_card",
+          "token": "12345",
+          "installments": 1,
+          "statement_descriptor": "My Store"
+        },
+        "expiration_time": "P3Y6M4DT12H30M5S"
+      }
+    ]
+  },
+  "payer": {
+    "email": "test@testuser.com",
+    "entity_type": "individual",
+    "first_name": "John",
+    "last_name": "Doe",
+    "identification": {
+      "type": "CPF",
+      "number": "99999999999"
+    },
+    "phone": {
+      "area_code": "11",
+      "number": "987654321"
+    },
+    "address": {
+      "zip_code": "12345678",
+      "street_name": "Rua Teste",
+      "street_number": "123",
+      "neighborhood": "Pres. Altino",
+      "state": "SP",
+      "city": "Osasco",
+      "complement": "Apto 303"
+    }
+  },
+  "shipment": {
+    "address": {
+      "zip_code": "12345678",
+      "street_name": "Rua Teste",
+      "street_number": "123",
+      "neighborhood": "Pres. Altino",
+      "city": "Osasco",
+      "state": "SP",
+      "complement": "Apto 303"
+    }
+  },
+  "total_amount": "24.90",
+  "capture_mode": "automatic_async",
+  "processing_mode": "automatic",
+  "description": "Smartphone",
+  "integration_data": {
+    "integrator_id": "dev_123",
+    "platform_id": "1234567890",
+    "sponsor": {
+      "id": "446566691"
+    }
+  },
+  "items": [
+    {
+      "title": "Smartphone",
+      "unit_price": "12.90",
+      "quantity": 4,
+      "description": "Smartphone",
+      "external_code": "1234",
+      "picture_url": "https://http2.mlstatic.com/resources/frontend/statics/growth-sellers-landings/device-mlb-point-i_medium2x.png",
+      "category_id": "MLB1055",
+      "type": "MLB1055",
+      "warranty": true,
+      "event_date": "2014-06-28T16:53:03.176-04:00"
+    }
+  ]
+}'
+
+# Resposta — Cartão
+{
+  "id": "ORD01J49MMW3SSBK5PSV3DFR32959",
+  "type": "online",
+  "processing_mode": "automatic",
+  "external_reference": "ext_ref_1234",
+  "total_amount": "24.90",
+  "total_paid_amount": "24.90",
+  "integration_data": {
+    "application_id": "1234",
+    "integrator_id": "dev_123",
+    "platform_id": "1234567890",
+    "sponsor": {
+      "id": "446566691"
+    }
+  },
+  "created_date": "2024-08-26T13:06:51.045317772Z",
+  "last_updated_date": "2024-08-26T13:06:51.045317772Z",
+  "country_code": "BRA",
+  "status": "processed",
+  "status_detail": "accredited",
+  "capture_mode": "automatic_async",
+  "shipment": {
+    "address": {
+      "zip_code": "12345678",
+      "street_name": "Rua Teste",
+      "street_number": "123",
+      "neighborhood": "Pres. Altino",
+      "city": "Osasco",
+      "state": "SP",
+      "complement": "Apto 303"
+    }
+  },
+  "transactions": {
+    "payments": [
+      {
+        "id": "PAY01J67CQQH5904WDBVZEM4JMEP3",
+        "amount": "24.90",
+        "paid_amount": "24.90",
+        "reference_id": "01JEVQM899NWSQC4FYWWW7KTF9",
+        "status": "processed",
+        "status_detail": "accredited",
+        "expiration_time": "P3Y6M4DT12H30M5S",
+        "payment_method": {
+          "id": "visa",
+          "type": "credit_card",
+          "token": "12345",
+          "installments": 1,
+          "statement_descriptor": "My Store",
+          "ticket_url": "https://www.mercadopago.com.ar/payments/86797024510/ticket?caller_id=1870026883&payment_method_id=rapipago&payment_id=86797024510&payment_method_reference_id=6004835002&hash=0331521a-9ddb-44a2-851c-65f77d8d394e",
+          "barcode_content": "3335008800000000006004835002100020000242462010",
+          "reference": "6005407530",
+          "verification_code": "6005407530",
+          "financial_institution": "bradesco",
+          "digitable_line": "23793380296060054351030006333303799140000020000",
+          "qr_code": "00020126580014br.gov.bcb.pix0136b76aa9c2-2ec4-4110-954e-ebfe34f05b61520400005303986540510.005802BR5912TESTPVBWOSBE6009Sao Paulo62240520mpqrinter715936942186304C3C0",
+          "qr_code_base64": "iVBORw0KGgoAAAANSUhEUgAABWQAAAVkAQAAAAB79i"
+        },
+        "date_of_expiration": "2023-03-01T10:00:00.000-04:00"
+      }
+    ]
+  },
+  "description": "Smartphone",
+  "items": [
+    {
+      "title": "Smartphone",
+      "unit_price": "12.90",
+      "quantity": 4,
+      "description": "Smartphone",
+      "external_code": "1234",
+      "picture_url": "https://http2.mlstatic.com/resources/frontend/statics/growth-sellers-landings/device-mlb-point-i_medium2x.png",
+      "category_id": "MLB1055",
+      "type": "MLB1055",
+      "warranty": "true",
+      "event_date": "2014-06-28T16:53:03.176-04:00"
+    }
+  ],
+  "client_token": "QWERTY12345.ASDFG67890"
+}
+
+# 2. Requisição — PIX
+curl -X POST \
+    'https://api.mercadopago.com/v1/orders'\
+    -H 'Content-Type: application/json' \
+    -H 'X-Idempotency-Key: 0d5020ed-1af6-469c-ae06-c3bec19954bb' \
+    -H 'Authorization: Bearer TEST-758********96044-11********b5524115********f311b918********8502083' \
+    -d '{
+  "type": "online",
+  "external_reference": "ext_ref_1234",
+  "transactions": {
+    "payments": [
+      {
+        "amount": "1000.00",
+        "payment_method": {
+          "id": "pix",
+          "type": "bank_transfer"
+        },
+        "expiration_time": "P3Y6M4DT12H30M5S"
+      }
+    ]
+  },
+  "payer": {
+    "email": "test@testuser.com",
+    "entity_type": "individual"
+  },
+  "shipment": {
+    "address": {
+      "zip_code": "12345678",
+      "street_name": "Rua Teste",
+      "street_number": "123",
+      "neighborhood": "Pres. Altino",
+      "city": "Osasco",
+      "state": "SP",
+      "complement": "Apto 303"
+    }
+  },
+  "total_amount": "1000.00"
+}'
+
+# Resposta — PIX
+{
+  "id": "ORD01HRYFWNYRE1MR1E60MW3X0T2P",
+  "type": "online",
+  "processing_mode": "automatic",
+  "external_reference": "ext_ref_1234",
+  "total_amount": "1000.00",
+  "total_paid_amount": "24.90",
+  "integration_data": {
+    "application_id": "4599991948843755",
+    "sponsor": {}
+  },
+  "created_date": "2025-04-25T13:49:10.931Z",
+  "last_updated_date": "2025-04-25T13:49:10.931Z",
+  "country_code": "BRA",
+  "status": "action_required",
+  "status_detail": "waiting_transfer",
+  "capture_mode": "automatic_assync",
+  "shipment": {
+    "address": {
+      "zip_code": "12345678",
+      "street_name": "Rua Teste",
+      "street_number": "123",
+      "neighborhood": "Pres. Altino",
+      "city": "Osasco",
+      "state": "SP",
+      "complement": "Apto 303"
+    }
+  },
+  "transactions": {
+    "payments": [
+      {
+        "id": "PAY01HRYFXQ53Q3JPEC48MYWMR0TE",
+        "amount": "1000.00",
+        "paid_amount": "24.90",
+        "reference_id": "123456789",
+        "status": "action_required",
+        "status_detail": "waiting_transfer",
+        "expiration_time": "P3Y6M4DT12H30M5S",
+        "payment_method": {
+          "id": "pix",
+          "type": "bank_transfer",
+          "ticket_url": "https://www.mercadopago.com.ar/payments/86797024510/ticket?caller_id=1870026883&payment_method_id=rapipago&payment_id=86797024510&payment_method_reference_id=6004835002&hash=0331521a-9ddb-44a2-851c-65f77d8d394e",
+          "qr_code": "00020126580014br.gov.bcb.pix0136b76aa9c2-2ec4-4110-954e-ebfe34f05b61520400005303986540510.005802BR5912TESTPVBWOSBE6009Sao Paulo62240520mpqrinter715936942186304C3C0",
+          "qr_code_base64": "iVBORw0KGgoAAAANSUhEUgAABWQAAAVkAQAAAAB79i"
+        },
+        "date_of_expiration": "2023-03-01T10:00:00.000-04:00"
+      }
+    ]
+  }
+}
+
+# Doc oficial: https://www.mercadopago.com.br/developers/pt/reference/orders/online-payments/create/post
