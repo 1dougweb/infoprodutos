@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File;
 
 class AdminController extends Controller
 {
@@ -109,6 +110,7 @@ class AdminController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'category' => 'required|string',
+            'section' => 'required|string|max:255',
             'product_type' => 'required|in:course,digital',
             'price' => 'nullable|numeric|min:0',
             'order' => 'required|integer|min:0',
@@ -169,6 +171,7 @@ class AdminController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'category' => 'required|string',
+            'section' => 'required|string|max:255',
             'product_type' => 'required|in:course,digital',
             'price' => 'nullable|numeric|min:0',
             'order' => 'required|integer|min:0',
@@ -342,8 +345,54 @@ class AdminController extends Controller
         $appearanceSettings = \App\Models\Setting::getAppearanceSettings();
         $brandingSettings = \App\Models\Setting::getBrandingSettings();
         $mercadopagoSettings = \App\Models\Setting::getMercadoPagoSettings();
+        $generalSettings = \App\Models\Setting::getGeneralSettings();
         
-        return view('admin.settings.index', compact('appearanceSettings', 'brandingSettings', 'mercadopagoSettings'));
+        // Gera URL dinâmica do webhook baseada no APP_URL
+        $webhookUrl = $this->generateWebhookUrl();
+        $isDevelopment = $this->isDevelopmentEnvironment();
+        
+        return view('admin.settings.index', compact(
+            'appearanceSettings', 
+            'brandingSettings', 
+            'mercadopagoSettings',
+            'generalSettings',
+            'webhookUrl',
+            'isDevelopment'
+        ));
+    }
+
+    /**
+     * Gera a URL do webhook de forma dinâmica
+     */
+    private function generateWebhookUrl(): string
+    {
+        $baseUrl = config('app.url');
+        
+        // Se é ambiente de desenvolvimento local, mantém a URL como está
+        if ($this->isDevelopmentEnvironment()) {
+            return $baseUrl . '/api/webhooks/mercadopago';
+        }
+        
+        // Para produção, força HTTPS se não estiver presente
+        if (strpos($baseUrl, 'https://') !== 0 && strpos($baseUrl, 'http://') === 0) {
+            $baseUrl = str_replace('http://', 'https://', $baseUrl);
+        }
+        
+        return $baseUrl . '/api/webhooks/mercadopago';
+    }
+
+    /**
+     * Verifica se está em ambiente de desenvolvimento
+     */
+    private function isDevelopmentEnvironment(): bool
+    {
+        $appUrl = config('app.url');
+        $isDev = config('app.env') === 'local' || config('app.env') === 'development';
+        $isLocalhost = strpos($appUrl, 'localhost') !== false || 
+                      strpos($appUrl, '127.0.0.1') !== false || 
+                      strpos($appUrl, '::1') !== false;
+        
+        return $isDev || $isLocalhost;
     }
 
     public function updateMercadoPagoSettings(Request $request)
@@ -365,6 +414,28 @@ class AdminController extends Controller
         return redirect()->route('admin.settings')->with('success', 'Configurações do Mercado Pago atualizadas!');
     }
 
+    public function updateGeneralSettings(Request $request)
+    {
+        $request->validate([
+            'homepage_type' => 'required|in:login,custom',
+            'homepage_url' => 'nullable|url|max:255',
+            'homepage_enabled' => 'nullable|in:0,1',
+        ]);
+
+        // Se o tipo é 'custom' mas não tem URL, voltar com erro
+        if ($request->homepage_type === 'custom' && empty($request->homepage_url)) {
+            return redirect()->back()
+                ->withErrors(['homepage_url' => 'A URL é obrigatória quando o tipo for "Página Personalizada".'])
+                ->withInput();
+        }
+
+        \App\Models\Setting::set('homepage_type', $request->homepage_type, 'string', 'general');
+        \App\Models\Setting::set('homepage_url', $request->homepage_url, 'string', 'general');
+        \App\Models\Setting::set('homepage_enabled', $request->homepage_enabled ?? '0', 'boolean', 'general');
+
+        return redirect()->route('admin.settings')->with('success', 'Configurações gerais atualizadas!');
+    }
+
     public function updateAppearanceSettings(Request $request)
     {
         $request->validate([
@@ -384,41 +455,135 @@ class AdminController extends Controller
 
     public function updateBrandingSettings(Request $request)
     {
-        $request->validate([
-            'site_name' => 'required|string|max:255',
-            'site_description' => 'nullable|string|max:500',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'favicon' => 'nullable|image|mimes:ico,png,jpg|max:1024',
-        ]);
-
-        \App\Models\Setting::set('site_name', $request->site_name, 'string', 'branding');
-        \App\Models\Setting::set('site_description', $request->site_description, 'string', 'branding');
-
-        // Handle logo upload
-        if ($request->hasFile('logo')) {
-            // Remove logo antigo se existir
-            $oldLogoPath = \App\Models\Setting::get('logo_path');
-            if ($oldLogoPath && Storage::disk('public')->exists($oldLogoPath)) {
-                Storage::disk('public')->delete($oldLogoPath);
+        try {
+            // Log de debug para início da função
+            $debugInfo = [
+                'has_logo' => $request->hasFile('logo'),
+                'has_favicon' => $request->hasFile('favicon'),
+                'files' => $request->allFiles()
+            ];
+            
+            if ($request->hasFile('logo')) {
+                $logoFile = $request->file('logo');
+                $debugInfo['logo_details'] = [
+                    'original_name' => $logoFile->getClientOriginalName(),
+                    'size' => $logoFile->getSize(),
+                    'mime_type' => $logoFile->getMimeType(),
+                    'client_mime_type' => $logoFile->getClientMimeType(),
+                    'extension' => $logoFile->getClientOriginalExtension(),
+                    'is_valid' => $logoFile->isValid(),
+                    'error' => $logoFile->getError(),
+                ];
             }
             
-            $logoPath = $request->file('logo')->store('branding', 'public');
-            \App\Models\Setting::set('logo_path', $logoPath, 'string', 'branding');
-        }
+            \Illuminate\Support\Facades\Log::info('updateBrandingSettings iniciado', $debugInfo);
 
-        // Handle favicon upload
-        if ($request->hasFile('favicon')) {
-            // Remove favicon antigo se existir
-            $oldFaviconPath = \App\Models\Setting::get('favicon_path');
-            if ($oldFaviconPath && Storage::disk('public')->exists($oldFaviconPath)) {
-                Storage::disk('public')->delete($oldFaviconPath);
+            $request->validate([
+                'site_name' => 'required|string|max:255',
+                'site_description' => 'nullable|string|max:500',
+                'logo' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
+                'favicon' => 'nullable|file|mimes:ico,png,jpg,jpeg,gif,webp|max:1024',
+            ]);
+
+            \App\Models\Setting::set('site_name', $request->site_name, 'string', 'branding');
+            \App\Models\Setting::set('site_description', $request->site_description, 'string', 'branding');
+
+            // Handle logo upload
+            if ($request->hasFile('logo')) {
+                $logoFile = $request->file('logo');
+                
+                \Illuminate\Support\Facades\Log::info('Processando upload de logo', [
+                    'original_name' => $logoFile->getClientOriginalName(),
+                    'size' => $logoFile->getSize(),
+                    'mime_type' => $logoFile->getMimeType(),
+                    'is_valid' => $logoFile->isValid()
+                ]);
+
+                if (!$logoFile->isValid()) {
+                    throw new \Exception('Arquivo de logo inválido');
+                }
+                
+                // Remove logo antigo se existir
+                $oldLogoPath = \App\Models\Setting::get('logo_path');
+                if ($oldLogoPath && file_exists(public_path($oldLogoPath))) {
+                    unlink(public_path($oldLogoPath));
+                    \Illuminate\Support\Facades\Log::info('Logo antigo removido', ['path' => $oldLogoPath]);
+                }
+                
+                // Verificar se o diretório existe
+                $brandingDir = public_path('uploads/branding');
+                if (!file_exists($brandingDir)) {
+                    mkdir($brandingDir, 0755, true);
+                    \Illuminate\Support\Facades\Log::info('Diretório branding criado', ['path' => $brandingDir]);
+                }
+                
+                // Salvar arquivo diretamente na pasta public
+                $fileName = time() . '_' . $logoFile->getClientOriginalName();
+                $logoFile->move($brandingDir, $fileName);
+                $logoPath = 'uploads/branding/' . $fileName;
+                \App\Models\Setting::set('logo_path', $logoPath, 'string', 'branding');
+                
+                \Illuminate\Support\Facades\Log::info('Logo salvo com sucesso', [
+                    'path' => $logoPath,
+                    'full_path' => storage_path('app/public/' . $logoPath)
+                ]);
             }
-            
-            $faviconPath = $request->file('favicon')->store('branding', 'public');
-            \App\Models\Setting::set('favicon_path', $faviconPath, 'string', 'branding');
-        }
 
-        return redirect()->route('admin.settings')->with('success', 'Configurações de marca atualizadas!');
+            // Handle favicon upload
+            if ($request->hasFile('favicon')) {
+                $faviconFile = $request->file('favicon');
+                
+                \Illuminate\Support\Facades\Log::info('Processando upload de favicon', [
+                    'original_name' => $faviconFile->getClientOriginalName(),
+                    'size' => $faviconFile->getSize(),
+                    'mime_type' => $faviconFile->getMimeType(),
+                    'is_valid' => $faviconFile->isValid()
+                ]);
+
+                if (!$faviconFile->isValid()) {
+                    throw new \Exception('Arquivo de favicon inválido');
+                }
+                
+                // Remove favicon antigo se existir
+                $oldFaviconPath = \App\Models\Setting::get('favicon_path');
+                if ($oldFaviconPath && file_exists(public_path($oldFaviconPath))) {
+                    unlink(public_path($oldFaviconPath));
+                    \Illuminate\Support\Facades\Log::info('Favicon antigo removido', ['path' => $oldFaviconPath]);
+                }
+                
+                // Verificar se o diretório existe
+                $brandingDir = public_path('uploads/branding');
+                if (!file_exists($brandingDir)) {
+                    mkdir($brandingDir, 0755, true);
+                    \Illuminate\Support\Facades\Log::info('Diretório branding criado para favicon', ['path' => $brandingDir]);
+                }
+                
+                // Salvar arquivo diretamente na pasta public
+                $fileName = time() . '_favicon_' . $faviconFile->getClientOriginalName();
+                $faviconFile->move($brandingDir, $fileName);
+                $faviconPath = 'uploads/branding/' . $fileName;
+                \App\Models\Setting::set('favicon_path', $faviconPath, 'string', 'branding');
+                
+                \Illuminate\Support\Facades\Log::info('Favicon salvo com sucesso', [
+                    'path' => $faviconPath,
+                    'full_path' => storage_path('app/public/' . $faviconPath)
+                ]);
+            }
+
+            return redirect()->route('admin.settings')->with('success', 'Configurações de marca atualizadas!');
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Illuminate\Support\Facades\Log::error('Erro de validação no upload', [
+                'errors' => $e->errors()
+            ]);
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Erro no upload de branding', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()->with('error', 'Erro ao fazer upload: ' . $e->getMessage())->withInput();
+        }
     }
 
     public function toggleAdmin($userId)
@@ -443,8 +608,8 @@ class AdminController extends Controller
         try {
             $logoPath = \App\Models\Setting::get('logo_path');
             
-            if ($logoPath && Storage::disk('public')->exists($logoPath)) {
-                Storage::disk('public')->delete($logoPath);
+            if ($logoPath && file_exists(public_path($logoPath))) {
+                unlink(public_path($logoPath));
             }
             
             \App\Models\Setting::set('logo_path', null, 'string', 'branding');
@@ -460,8 +625,8 @@ class AdminController extends Controller
         try {
             $faviconPath = \App\Models\Setting::get('favicon_path');
             
-            if ($faviconPath && Storage::disk('public')->exists($faviconPath)) {
-                Storage::disk('public')->delete($faviconPath);
+            if ($faviconPath && file_exists(public_path($faviconPath))) {
+                unlink(public_path($faviconPath));
             }
             
             \App\Models\Setting::set('favicon_path', null, 'string', 'branding');
@@ -788,5 +953,181 @@ class AdminController extends Controller
             });
 
         return view('admin.online-users', compact('onlineUsers'));
+    }
+
+    // ===== FERRAMENTAS DO SISTEMA =====
+    
+    public function clearCache()
+    {
+        try {
+            // Limpar diferentes tipos de cache
+            \Illuminate\Support\Facades\Artisan::call('cache:clear');
+            \Illuminate\Support\Facades\Artisan::call('config:clear');
+            \Illuminate\Support\Facades\Artisan::call('route:clear');
+            \Illuminate\Support\Facades\Artisan::call('view:clear');
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Cache limpo com sucesso! (Config, Routes, Views e Application Cache)'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao limpar cache: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function downloadBackup()
+    {
+        try {
+            $timestamp = now()->format('Y-m-d_H-i-s');
+            $backupName = "backup_sistema_{$timestamp}.sql";
+            $backupPath = storage_path("app/backups/{$backupName}");
+            
+            // Criar diretório de backup se não existir
+            if (!file_exists(storage_path('app/backups'))) {
+                mkdir(storage_path('app/backups'), 0755, true);
+            }
+            
+            $dbConfig = config('database.connections.' . config('database.default'));
+            
+            // Verificar se mysqldump está disponível
+            $mysqldumpPath = $this->findMysqldump();
+            
+            if (!$mysqldumpPath) {
+                throw new \Exception('mysqldump não encontrado no sistema. Instale MySQL Client Tools.');
+            }
+            
+            $command = sprintf(
+                '%s --single-transaction --routines --triggers -h%s -u%s -p%s %s > %s 2>/dev/null',
+                $mysqldumpPath,
+                escapeshellarg($dbConfig['host']),
+                escapeshellarg($dbConfig['username']),
+                escapeshellarg($dbConfig['password']),
+                escapeshellarg($dbConfig['database']),
+                escapeshellarg($backupPath)
+            );
+            
+            exec($command, $output, $returnCode);
+            
+            if ($returnCode === 0 && file_exists($backupPath) && filesize($backupPath) > 0) {
+                return response()->download($backupPath)->deleteFileAfterSend(true);
+            } else {
+                // Se falhou, tentar método alternativo usando Laravel
+                return $this->createBackupAlternative($backupName, $backupPath);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao criar backup: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function findMysqldump()
+    {
+        $paths = [
+            'mysqldump', // PATH do sistema
+            '/usr/bin/mysqldump',
+            '/usr/local/bin/mysqldump',
+            '/opt/homebrew/bin/mysqldump', // macOS Homebrew
+            'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqldump.exe', // Windows
+        ];
+
+        foreach ($paths as $path) {
+            if (is_executable($path)) {
+                return $path;
+            }
+        }
+
+        // Tentar encontrar via which/where
+        $which = PHP_OS_FAMILY === 'Windows' ? 'where' : 'which';
+        exec("$which mysqldump 2>/dev/null", $output, $returnCode);
+        
+        if ($returnCode === 0 && !empty($output[0])) {
+            return trim($output[0]);
+        }
+
+        return null;
+    }
+
+    private function createBackupAlternative($backupName, $backupPath)
+    {
+        // Método alternativo usando consultas Laravel (mais lento, mas funciona)
+        $tables = \Illuminate\Support\Facades\DB::select("SHOW TABLES");
+        $sql = "-- Backup gerado pelo sistema em " . now()->format('Y-m-d H:i:s') . "\n\n";
+        
+        foreach ($tables as $table) {
+            $tableName = array_values((array) $table)[0];
+            
+            // Estrutura da tabela
+            $createTable = \Illuminate\Support\Facades\DB::select("SHOW CREATE TABLE `{$tableName}`");
+            $sql .= "-- Estrutura da tabela `{$tableName}`\n";
+            $sql .= "DROP TABLE IF EXISTS `{$tableName}`;\n";
+            $sql .= $createTable[0]->{'Create Table'} . ";\n\n";
+            
+            // Dados da tabela
+            $rows = \Illuminate\Support\Facades\DB::table($tableName)->get();
+            if ($rows->count() > 0) {
+                $sql .= "-- Dados da tabela `{$tableName}`\n";
+                $sql .= "INSERT INTO `{$tableName}` VALUES \n";
+                
+                $values = [];
+                foreach ($rows as $row) {
+                    $rowData = array_map(function($value) {
+                        return $value === null ? 'NULL' : "'" . addslashes($value) . "'";
+                    }, (array) $row);
+                    $values[] = '(' . implode(', ', $rowData) . ')';
+                }
+                
+                $sql .= implode(",\n", $values) . ";\n\n";
+            }
+        }
+        
+        file_put_contents($backupPath, $sql);
+        
+        if (file_exists($backupPath) && filesize($backupPath) > 0) {
+            return response()->download($backupPath)->deleteFileAfterSend(true);
+        } else {
+            throw new \Exception('Falha ao criar backup alternativo');
+        }
+    }
+
+    public function getSystemLogs()
+    {
+        try {
+            $logPath = storage_path('logs/laravel.log');
+            
+            if (!file_exists($logPath)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Arquivo de log não encontrado'
+                ], 404);
+            }
+            
+            // Ler as últimas 100 linhas do log
+            $lines = [];
+            $file = file($logPath);
+            $totalLines = count($file);
+            $startLine = max(0, $totalLines - 100);
+            
+            for ($i = $startLine; $i < $totalLines; $i++) {
+                $lines[] = $file[$i];
+            }
+            
+            $logContent = implode('', array_reverse($lines)); // Mais recentes primeiro
+            
+            return response()->json([
+                'success' => true,
+                'logs' => $logContent,
+                'total_lines' => $totalLines
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao ler logs: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

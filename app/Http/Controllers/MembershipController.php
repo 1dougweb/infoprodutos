@@ -14,8 +14,50 @@ class MembershipController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $products = DigitalProduct::active()->ordered()->get();
+        
+        // Construir query com filtros
+        $query = DigitalProduct::active()->ordered();
+        
+        // Aplicar filtros se fornecidos
+        if ($request->filled('section')) {
+            $query->bySection($request->section);
+        }
+        
+        if ($request->filled('category')) {
+            $query->byCategory($request->category);
+        }
+        
+        if ($request->filled('type')) {
+            $query->byType($request->type);
+        }
+        
+        if ($request->filled('access_type')) {
+            if ($request->access_type === 'free') {
+                $query->free();
+            } elseif ($request->access_type === 'paid') {
+                $query->paid();
+            }
+        }
+        
+        // Filtro por status de acesso do usuário
+        if ($request->filled('user_access')) {
+            if ($request->user_access === 'purchased') {
+                $query->whereHas('purchases', function($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                });
+            } elseif ($request->user_access === 'not_purchased') {
+                $query->whereDoesntHave('purchases', function($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                });
+            }
+        }
+        
+        $products = $query->get();
         $banners = Banner::active()->ordered()->get();
+        
+        // Obter dados para filtros
+        $sections = DigitalProduct::active()->distinct()->pluck('section');
+        $categories = DigitalProduct::active()->distinct()->pluck('category');
         
         // Verificar se veio de um pagamento bem-sucedido
         if ($request->query('payment_success') === 'true') {
@@ -24,12 +66,12 @@ class MembershipController extends Controller
             // Buscar o pedido para mostrar informações
             $order = \App\Models\Order::find($orderId);
             if ($order && $order->status === 'approved') {
-                return view('membership.index', compact('user', 'products', 'banners'))
+                return view('membership.index', compact('user', 'products', 'banners', 'sections', 'categories'))
                     ->with('success', 'Pagamento aprovado! Produto liberado para acesso.');
             }
         }
         
-        return view('membership.index', compact('user', 'products', 'banners'));
+        return view('membership.index', compact('user', 'products', 'banners', 'sections', 'categories'));
     }
 
     public function download($id)

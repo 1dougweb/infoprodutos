@@ -29,6 +29,11 @@ class SettingsSeeder extends Seeder
         Setting::set('mercadopago_public_key', '', 'string', 'mercadopago');
         Setting::set('mercadopago_environment', 'sandbox', 'string', 'mercadopago');
 
+        // Configurações Gerais
+        Setting::set('homepage_type', 'login', 'string', 'general');
+        Setting::set('homepage_url', '', 'string', 'general');
+        Setting::set('homepage_enabled', '1', 'boolean', 'general');
+
         $this->command->info('Configurações padrão criadas com sucesso!');
     }
 }

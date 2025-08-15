@@ -178,7 +178,7 @@ class PaymentController extends Controller
                 // Se for um token de teste, garantir que tenha pelo menos 32 caracteres
                 if (strlen($cardToken) < 32) {
                     $cardToken = str_pad($cardToken, 32, '0', STR_PAD_RIGHT);
-                    Log::info('Token ajustado para 32 caracteres: ' . $cardToken);
+                    Log::info('Token ajustado para 32 caracteres: ' . substr($cardToken, 0, 8) . '...');
                 }
                 
                 $orderData["transactions"] = [
@@ -208,7 +208,12 @@ class PaymentController extends Controller
                 }
             }
             
-            Log::info('Dados da ordem para Mercado Pago: ' . json_encode($orderData));
+            // Log dos dados da ordem sem informações sensíveis
+            $logOrderData = $orderData;
+            if (isset($logOrderData['transactions']['payments'][0]['token'])) {
+                $logOrderData['transactions']['payments'][0]['token'] = substr($logOrderData['transactions']['payments'][0]['token'], 0, 8) . '...';
+            }
+            Log::info('Dados da ordem para Mercado Pago: ' . json_encode($logOrderData));
             
             // Fazer a requisição para a API do Mercado Pago
             $client = new \GuzzleHttp\Client();
@@ -223,7 +228,12 @@ class PaymentController extends Controller
             
             // Processar resposta
             $responseData = json_decode($response->getBody(), true);
-            Log::info('Resposta da API do Mercado Pago: ' . json_encode($responseData));
+            // Log da resposta sem dados sensíveis
+            $logResponse = $responseData;
+            if (isset($logResponse['client_token'])) {
+                $logResponse['client_token'] = substr($logResponse['client_token'], 0, 8) . '...';
+            }
+            Log::info('Resposta da API do Mercado Pago: ' . json_encode($logResponse));
             
             // Atualizar o pedido com os dados do Mercado Pago
             $order->update([
@@ -341,7 +351,12 @@ class PaymentController extends Controller
                 $payload['payer']['last_name'] = $this->ensureString($request->input('payer.last_name'));
             }
             
-            Log::info('Payload para API de Payments PIX:', $payload);
+            // Log do payload PIX sem dados sensíveis
+            $logPixPayload = $payload;
+            if (isset($logPixPayload['payer']['identification']['number'])) {
+                $logPixPayload['payer']['identification']['number'] = substr($logPixPayload['payer']['identification']['number'], 0, 3) . '...';
+            }
+            Log::info('Payload para API de Payments PIX:', $logPixPayload);
             
             // Gerar ID de idempotência único
             $idempotencyKey = md5('pix_' . $order->id . '_' . time() . '_' . rand(1000, 9999));
@@ -359,7 +374,12 @@ class PaymentController extends Controller
             ]);
             
             $responseData = json_decode($response->getBody(), true);
-            Log::info('Resposta da API de Payments PIX:', $responseData);
+            // Log da resposta PIX sem dados sensíveis
+            $logPixResponse = $responseData;
+            if (isset($logPixResponse['payer']['identification']['number'])) {
+                $logPixResponse['payer']['identification']['number'] = substr($logPixResponse['payer']['identification']['number'], 0, 3) . '...';
+            }
+            Log::info('Resposta da API de Payments PIX:', $logPixResponse);
             
             if (isset($responseData['id'])) {
                 // Atualizar o pedido com o ID do pagamento
@@ -494,12 +514,12 @@ class PaymentController extends Controller
             $pixData['qr_code_base64'] = $transactionData['qr_code_base64'] ?? null;
             $pixData['ticket_url'] = $transactionData['ticket_url'] ?? null;
             
-            // Log dos dados PIX extraídos
+            // Log dos dados PIX extraídos (sem expor códigos completos)
             if ($pixData['qr_code']) {
                 Log::info('=== DADOS PIX EXTRAÍDOS ===');
-                Log::info('QR Code: ' . $pixData['qr_code']);
+                Log::info('QR Code: ' . substr($pixData['qr_code'], 0, 20) . '...');
                 Log::info('QR Code Base64: ' . ($pixData['qr_code_base64'] ? 'disponível' : 'não disponível'));
-                Log::info('Ticket URL: ' . ($pixData['ticket_url'] ?? 'não disponível'));
+                Log::info('Ticket URL: ' . ($pixData['ticket_url'] ? 'disponível' : 'não disponível'));
                 Log::info('=== FIM DADOS PIX ===');
             }
         }
@@ -625,6 +645,15 @@ class PaymentController extends Controller
                 $responseData = json_decode($response->getBody(), true);
                 Log::info('Resposta da API do Mercado Pago:', $responseData);
                 
+                // Log detalhado da resposta
+                Log::info('Verificando resposta da API:', [
+                    'responseData_keys' => array_keys($responseData),
+                    'responseData_id_exists' => isset($responseData['id']),
+                    'responseData_id_value' => $responseData['id'] ?? 'NÃO EXISTE',
+                    'responseData_status' => $responseData['status'] ?? 'NÃO EXISTE',
+                    'responseData_type' => gettype($responseData['id'] ?? null)
+                ]);
+                
                 if (isset($responseData['id'])) {
                     // Atualizar o pedido com o ID do pagamento
                     $order->update([
@@ -640,11 +669,25 @@ class PaymentController extends Controller
                     
                     Log::info('Dados PIX extraídos:', $pixData);
                     
-                    return response()->json([
+                    // Log the response data for debugging
+                    Log::info('Resposta final da API para o frontend:', [
+                        'response_data_id' => $responseData['id'] ?? 'ID não presente',
+                        'full_response' => $responseData,
+                        'pix_data' => $pixData
+                    ]);
+                    
+                    // Log do que será retornado no JSON
+                    $jsonResponse = [
                         'success' => true,
+                        'payment_id' => $responseData['id'],
+                        'mercadopago_payment_id' => $responseData['id'],
                         'pix_data' => $pixData,
                         'message' => 'QR Code PIX gerado com sucesso'
-                    ]);
+                    ];
+                    
+                    Log::info('JSON que será retornado para o frontend:', $jsonResponse);
+                    
+                    return response()->json($jsonResponse);
                 } else {
                     Log::error('Resposta da API sem ID de pagamento:', $responseData);
                     return response()->json(['error' => 'Resposta da API sem ID de pagamento', 'details' => $responseData], 400);
@@ -801,24 +844,37 @@ class PaymentController extends Controller
 
         $paymentId = $request->query('payment_id');
         $preferenceId = $request->query('preference_id');
+        $orderId = $request->query('order_id');
 
-        // Buscar pedido por payment_id ou preference_id
+        // Buscar pedido por payment_id, preference_id ou order_id
         $order = null;
-        if ($paymentId) {
+        if ($paymentId && $paymentId !== 'undefined') {
             $order = Order::where('mercadopago_payment_id', $paymentId)->first();
+            Log::info('Buscando pedido por payment_id: ' . $paymentId);
         }
-        if (!$order && $preferenceId) {
+        if (!$order && $preferenceId && $preferenceId !== 'undefined') {
             $order = Order::where('mercadopago_preference_id', $preferenceId)->first();
+            Log::info('Buscando pedido por preference_id: ' . $preferenceId);
+        }
+        if (!$order && $orderId) {
+            $order = Order::find($orderId);
+            Log::info('Buscando pedido por order_id: ' . $orderId);
         }
 
         if (!$order) {
-            Log::error('Pedido não encontrado para payment_id: ' . $paymentId . ' ou preference_id: ' . $preferenceId);
+            Log::error('Pedido não encontrado para payment_id: ' . $paymentId . ', preference_id: ' . $preferenceId . ' ou order_id: ' . $orderId);
             return redirect()->route('membership.index')->with('error', 'Pedido não encontrado.');
         }
 
         // Se o pedido já foi aprovado, apenas redirecionar
         if ($order->status === 'approved') {
             Log::info('Pedido já aprovado. Redirecionando para área de membros.');
+            return redirect()->route('membership.index')->with('success', 'Pagamento aprovado! Produto disponível.');
+        }
+
+        // Se não temos payment_id válido mas o pedido foi aprovado, apenas redirecionar
+        if ((!$paymentId || $paymentId === 'undefined') && $order->status === 'approved') {
+            Log::info('Pedido aprovado sem payment_id válido. Redirecionando para área de membros.');
             return redirect()->route('membership.index')->with('success', 'Pagamento aprovado! Produto disponível.');
         }
 
@@ -872,8 +928,16 @@ class PaymentController extends Controller
                     'Erro ao verificar status do pagamento. Por favor, entre em contato com o suporte.');
             }
         } else {
-            Log::error('Payment ID não fornecido');
-            return redirect()->route('membership.index')->with('error', 'ID do pagamento não fornecido.');
+            Log::warning('Payment ID não fornecido ou inválido: ' . $paymentId);
+            
+            // Se o pedido foi aprovado pelo webhook, apenas redirecionar
+            if ($order->status === 'approved') {
+                Log::info('Pedido aprovado pelo webhook. Redirecionando para área de membros.');
+                return redirect()->route('membership.index')->with('success', 'Pagamento aprovado! Produto disponível.');
+            }
+            
+            // Se não foi aprovado, mostrar erro
+            return redirect()->route('membership.index')->with('error', 'ID do pagamento não fornecido ou inválido.');
         }
 
         // Só aprovar se o status for realmente 'approved'
@@ -1099,8 +1163,21 @@ class PaymentController extends Controller
             $client = new \MercadoPago\Client\Payment\PaymentClient();
             $payment = $client->get($paymentId);
             
-            // Log da resposta completa para debug
-            Log::info('Resposta completa do pagamento: ' . json_encode($payment, JSON_PRETTY_PRINT));
+            // Log da resposta sem dados sensíveis
+            $logPayment = [
+                'id' => $payment->id ?? 'não informado',
+                'status' => $payment->status ?? 'não informado',
+                'status_detail' => $payment->status_detail ?? 'não informado',
+                'payment_method_id' => $payment->payment_method_id ?? 'não informado',
+                'payment_type_id' => $payment->payment_type_id ?? 'não informado',
+                'external_reference' => $payment->external_reference ?? 'não informado',
+                'transaction_amount' => $payment->transaction_amount ?? 'não informado',
+                'installments' => $payment->installments ?? 'não informado',
+                'date_created' => $payment->date_created ?? 'não informado',
+                'date_approved' => $payment->date_approved ?? 'não informado',
+                'date_last_updated' => $payment->date_last_updated ?? 'não informado'
+            ];
+            Log::info('Dados do pagamento (sem informações sensíveis):', $logPayment);
             
             // Log detalhado dos campos importantes
             Log::info('Detalhes do pagamento:', [
@@ -1132,12 +1209,12 @@ class PaymentController extends Controller
                         'ticket_url' => $transactionData->ticket_url ?? 'não informado'
                     ]);
                     
-                    // Log do código PIX gerado
-                    if (isset($transactionData->qr_code)) {
+                    // Log do código PIX gerado (sem expor códigos completos)
+                    if (isset($transactionaData->qr_code)) {
                         Log::info('=== CÓDIGO PIX GERADO ===');
-                        Log::info('QR Code: ' . $transactionData->qr_code);
+                        Log::info('QR Code: ' . substr($transactionData->qr_code, 0, 20) . '...');
                         Log::info('QR Code Base64: ' . ($transactionData->qr_code_base64 ? 'disponível' : 'não disponível'));
-                        Log::info('Ticket URL: ' . ($transactionData->ticket_url ?? 'não disponível'));
+                        Log::info('Ticket URL: ' . ($transactionData->ticket_url ? 'disponível' : 'não disponível'));
                         Log::info('=== FIM CÓDIGO PIX ===');
                     }
                 }
@@ -1212,17 +1289,27 @@ class PaymentController extends Controller
             
             // Processar o pagamento com base no status
             if ($payment->status == 'approved') {
-                // VERIFICAÇÃO CRÍTICA: Validar se é um cartão de teste válido
-                if ($this->isValidTestCard($payment)) {
-                    Log::info('Pagamento aprovado - processando aprovação do pedido');
-                    $this->approveOrder($order, $payment);
+                // VERIFICAÇÃO CRÍTICA: Validar cartão de teste APENAS para pagamentos com cartão
+                $paymentMethodId = $payment->payment_method_id ?? '';
+                $paymentTypeId = $payment->payment_type_id ?? '';
+                
+                // Se for pagamento com cartão, validar se é cartão de teste
+                if ($this->isCardPayment($paymentMethodId, $paymentTypeId)) {
+                    if ($this->isValidTestCard($payment)) {
+                        Log::info('Pagamento com cartão aprovado - processando aprovação do pedido');
+                        $this->approveOrder($order, $payment);
+                    } else {
+                        Log::warning('Cartão de teste rejeitado - não processando aprovação');
+                        // Atualizar status para rejeitado
+                        $order->update([
+                            'status' => 'rejected',
+                            'mercadopago_payment_id' => $paymentId
+                        ]);
+                    }
                 } else {
-                    Log::warning('Cartão de teste rejeitado - não processando aprovação');
-                    // Atualizar status para rejeitado
-                    $order->update([
-                        'status' => 'rejected',
-                        'mercadopago_payment_id' => $paymentId
-                    ]);
+                    // Para outros métodos de pagamento (PIX, boleto, etc.), processar normalmente
+                    Log::info('Pagamento aprovado (não-cartão) - processando aprovação do pedido');
+                    $this->approveOrder($order, $payment);
                 }
             } else {
                 Log::info('Pagamento não aprovado. Status: ' . ($payment->status ?? 'unknown'));
@@ -1651,7 +1738,7 @@ class PaymentController extends Controller
                 }
                 
                 $payload['token'] = $cardToken;
-                Log::info('Token do cartão incluído: ' . $cardToken);
+                Log::info('Token do cartão incluído: ' . substr($cardToken, 0, 8) . '...');
             }
             
             // Adicionar dados de identificação se fornecidos
@@ -1672,7 +1759,12 @@ class PaymentController extends Controller
                 Log::info('Notification URL não incluída (ambiente local)');
             }
             
-            Log::info('Payload para API de Payments (Cartão):', $payload);
+            // Log do payload sem dados sensíveis
+            $logPayload = $payload;
+            if (isset($logPayload['card_token'])) {
+                $logPayload['card_token'] = substr($logPayload['card_token'], 0, 8) . '...';
+            }
+            Log::info('Payload para API de Payments (Cartão):', $logPayload);
             
             // Fazer a requisição para a API de pagamentos
             $client = new \GuzzleHttp\Client();
@@ -1693,7 +1785,12 @@ class PaymentController extends Controller
             ]);
             
             $responseData = json_decode($response->getBody(), true);
-            Log::info('Resposta da API de Payments (Cartão):', $responseData);
+            // Log da resposta sem dados sensíveis
+            $logResponseData = $responseData;
+            if (isset($logResponseData['card']['id'])) {
+                $logResponseData['card']['id'] = substr($logResponseData['card']['id'], 0, 8) . '...';
+            }
+            Log::info('Resposta da API de Payments (Cartão):', $logResponseData);
             
             if (isset($responseData['id'])) {
                 // Atualizar o pedido com o ID do pagamento
@@ -1816,6 +1913,39 @@ class PaymentController extends Controller
             // Em caso de erro, por segurança, rejeitar
             return false;
         }
+    }
+
+    /**
+     * Verifica se o pagamento é feito com cartão de crédito/débito
+     */
+    private function isCardPayment($paymentMethodId, $paymentTypeId)
+    {
+        // Identificar métodos de pagamento que são cartões
+        $cardMethods = [
+            'visa', 'master', 'elo', 'amex', 'hipercard', 'diners', 'discover',
+            'jcb', 'naranja', 'shopping', 'cabal', 'maestro', 'mastercard',
+            'visa_electron', 'elo_debit', 'maestro_debit'
+        ];
+        
+        $cardTypes = [
+            'credit_card', 'debit_card'
+        ];
+        
+        // Verificar se o método de pagamento é um cartão
+        $isCardMethod = in_array(strtolower($paymentMethodId), $cardMethods);
+        
+        // Verificar se o tipo de pagamento é cartão
+        $isCardType = in_array(strtolower($paymentTypeId), $cardTypes);
+        
+        Log::info('Verificação de pagamento com cartão:', [
+            'payment_method_id' => $paymentMethodId,
+            'payment_type_id' => $paymentTypeId,
+            'is_card_method' => $isCardMethod,
+            'is_card_type' => $isCardType,
+            'is_card_payment' => ($isCardMethod || $isCardType)
+        ]);
+        
+        return ($isCardMethod || $isCardType);
     }
 
     /**

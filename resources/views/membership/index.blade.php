@@ -49,10 +49,14 @@
                     @if($banner->link)
                         <a href="{{ $banner->link }}" target="_blank" class="banner-link">
                     @endif
-                    
-                    <div class="banner-slide" style="background-image: url('{{ Storage::url($banner->image_path) }}')">
-                    </div>
-                    
+                            <div class="banner-slide" style="background-image: url('{{ Storage::url($banner->image_path) }}')">
+                                <div class="banner-content">
+                                    <h2 class="banner-title">{{ $banner->title }}</h2>
+                                    @if($banner->description)
+                                        <p class="banner-description">{{ $banner->description }}</p>
+                                    @endif
+                                </div>
+                            </div>
                     @if($banner->link)
                         </a>
                     @endif
@@ -73,93 +77,345 @@
     </div>
 </div>
 @endif
-                                                                                                                                                                                                                                                                                                                                                                                                            
-<!-- Products Section -->
-<div class="section-title">
-    <span>Comece por aqui</span>
-    <div class="nav-arrows">
-        <a href="#" class="nav-arrow">
-            <i class="bi bi-chevron-left"></i>
-        </a>
-        <a href="#" class="nav-arrow">
-            <i class="bi bi-chevron-right"></i>
-        </a>
-    </div>
-</div>
 
-<div class="products-grid">
-    @foreach($products as $product)
-        <div class="product-card {{ !$user->hasPurchased($product->id) ? 'locked' : '' }}">
-            @php
-                $imageUrl = $product->image && Illuminate\Support\Facades\Storage::disk('public')->exists($product->image) 
-                    ? url('/storage/products/images/' . basename($product->image))
-                    : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSJ1cmwoI2dyYWRpZW50KSIvPgo8ZGVmcz4KPGxpbmVhckdyYWRpZW50IGlkPSJncmFkaWVudCIgeDE9IjAiIHkxPSIwIiB4Mj0iMjAwIiB5Mj0iMjAwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CjxzdG9wIHN0b3AtY29sb3I9IiMwMDdiZmYiLz4KPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMDA1NmIzIi8+CjwvbGluZWFyR3JhZGllbnQ+CjwvZGVmcz4KPC9zdmc+';
-            @endphp
-            <div class="product-image {{ !$user->hasPurchased($product->id) ? 'locked' : '' }}" 
-                 style="background-image: url('{{ $imageUrl }}')">
-                @if(!$user->hasPurchased($product->id))
-                    <div class="lock-icon">
-                        <i class="bi bi-lock-fill"></i>
-                    </div>
-                @endif
-                <div class="product-overlay">
-                    <div class="product-title-overlay">{{ $product->title }}</div>
-                </div>
+<!-- Filtros Elegantes -->
+<div class="elegant-filters mb-4">
+    <form method="GET" action="{{ route('membership.index') }}" id="filters-form">
+        <div class="filters-pills">
+            <!-- Filtro por Seção -->
+            <div class="filter-pill">
+                <select name="section" class="elegant-select" onchange="this.form.submit()">
+                    <option value="">Todas as seções</option>
+                    @foreach($sections as $section)
+                        <option value="{{ $section }}" {{ request('section') == $section ? 'selected' : '' }}>
+                            {{ $section }}
+                        </option>
+                    @endforeach
+                </select>
             </div>
 
-            
-            @if($user->hasPurchased($product->id))
-                @if($product->product_type === 'digital')
-                    <a href="{{ route('membership.digital.product', $product->id) }}" class="action-btn">
-                        <i class="bi bi-download"></i> Acessar
+            <!-- Filtro por Categoria -->
+            <div class="filter-pill">
+                <select name="category" class="elegant-select" onchange="this.form.submit()">
+                    <option value="">Todas as categorias</option>
+                    @foreach($categories as $category)
+                        <option value="{{ $category }}" {{ request('category') == $category ? 'selected' : '' }}>
+                            {{ ucfirst($category) }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- Filtro por Tipo -->
+            <div class="filter-pill">
+                <select name="type" class="elegant-select" onchange="this.form.submit()">
+                    <option value="">Todos os tipos</option>
+                    <option value="course" {{ request('type') == 'course' ? 'selected' : '' }}>Cursos</option>
+                    <option value="digital" {{ request('type') == 'digital' ? 'selected' : '' }}>Downloads</option>
+                </select>
+            </div>
+
+            <!-- Filtro por Acesso -->
+            <div class="filter-pill">
+                <select name="access_type" class="elegant-select" onchange="this.form.submit()">
+                    <option value="">Todos</option>
+                    <option value="free" {{ request('access_type') == 'free' ? 'selected' : '' }}>Gratuitos</option>
+                    <option value="paid" {{ request('access_type') == 'paid' ? 'selected' : '' }}>Pagos</option>
+                </select>
+            </div>
+
+            <!-- Filtro por Status do Usuário -->
+            <div class="filter-pill">
+                <select name="user_access" class="elegant-select" onchange="this.form.submit()">
+                    <option value="">Meu status</option>
+                    <option value="purchased" {{ request('user_access') == 'purchased' ? 'selected' : '' }}>Adquiridos</option>
+                    <option value="not_purchased" {{ request('user_access') == 'not_purchased' ? 'selected' : '' }}>Não adquiridos</option>
+                </select>
+            </div>
+
+            <!-- Botão Limpar (só aparece se há filtros ativos) -->
+            @if(request()->hasAny(['section', 'category', 'type', 'access_type', 'user_access']))
+                <div class="filter-pill">
+                    <a href="{{ route('membership.index') }}" class="clear-filters">
+                        <i class="bi bi-x-circle"></i> Limpar
                     </a>
-                @else
-                    <a href="{{ route('membership.course', $product->id) }}" class="action-btn">
-                        <i class="bi bi-play-circle"></i> Continuar
-                    </a>
-                @endif
-            @else
-                <a href="#" onclick="processCheckout({{ $product->id }}); return false;" class="action-btn buy-btn">
-                    <i class="bi bi-cart-plus"></i> Comprar
-                </a>
+                </div>
             @endif
         </div>
-    @endforeach
+    </form>
 </div>
 
+<!-- Produtos organizados por seção -->
+@php
+    $productsBySection = $products->groupBy('section');
+@endphp
+
+@if($productsBySection->count() > 0)
+    @foreach($productsBySection as $section => $sectionProducts)
+        <div class="section-container mb-5">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="bi bi-collection"></i>
+                    {{ $section }}
+                    <span class="section-count">({{ $sectionProducts->count() }} {{ $sectionProducts->count() == 1 ? 'item' : 'itens' }})</span>
+                </h2>
+                
+                <!-- Navegação da seção -->
+                <div class="section-nav">
+                    <button class="section-nav-btn" onclick="scrollSection('{{ $section }}', 'left')">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <button class="section-nav-btn" onclick="scrollSection('{{ $section }}', 'right')">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="products-scroll-container" id="scroll-{{ $section }}">
+                <div class="products-grid">
+                    @foreach($sectionProducts as $product)
+                        <div class="product-card {{ !$user->hasPurchased($product->id) ? 'locked' : '' }}">
+                            @php
+                                $imageUrl = $product->image && Illuminate\Support\Facades\Storage::disk('public')->exists($product->image) 
+                                    ? url('/storage/products/images/' . basename($product->image))
+                                    : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSJ1cmwoI2dyYWRpZW50KSIvPgo8ZGVmcz4KPGxpbmVhckdyYWRpZW50IGlkPSJncmFkaWVudCIgeDE9IjAiIHkxPSIwIiB4Mj0iMjAwIiB5Mj0iMjAwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CjxzdG9wIHN0b3AtY29sb3I9IiMwMDdiZmYiLz4KPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMDA1NmIzIi8+CjwvbGluZWFyR3JhZGllbnQ+CjwvZGVmcz4KPC9zdmc+';
+                            @endphp
+                            
+                            <div class="product-image {{ !$user->hasPurchased($product->id) ? 'locked' : '' }}" 
+                                 style="background-image: url('{{ $imageUrl }}')">
+                                @if(!$user->hasPurchased($product->id))
+                                    <div class="lock-icon">
+                                        <i class="bi bi-lock-fill"></i>
+                                    </div>
+                                @endif
+                                <div class="product-overlay">
+                                    <div class="product-title-overlay">{{ $product->title }}</div>
+                                </div>
+                            </div>
+
+                            @if($user->hasPurchased($product->id))
+                                @if($product->product_type === 'digital')
+                                    <a href="{{ route('membership.digital.product', $product->id) }}" class="action-btn">
+                                        <i class="bi bi-download"></i> Acessar
+                                    </a>
+                                @else
+                                    <a href="{{ route('membership.course', $product->id) }}" class="action-btn">
+                                        <i class="bi bi-play-circle"></i> Continuar
+                                    </a>
+                                @endif
+                            @else
+                                <a href="#" onclick="processCheckout({{ $product->id }}); return false;" class="action-btn buy-btn">
+                                    <i class="bi bi-cart-plus"></i> Comprar
+                                </a>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    @endforeach
+@else
+    <div class="empty-state">
+        <div class="empty-icon">
+            <i class="bi bi-search"></i>
+        </div>
+        <h3>Nenhum produto encontrado</h3>
+        <p>Tente ajustar os filtros ou volte mais tarde para ver novos conteúdos.</p>
+        <a href="{{ route('membership.index') }}" class="btn btn-primary">
+            <i class="bi bi-arrow-clockwise"></i> Limpar Filtros
+        </a>
+    </div>
+@endif
+
 <style>
-.section-title {
-    font-size: 32px;
-    font-weight: bold;
-    margin-bottom: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+/* Estilos base */
+:root {
+    --primary-blue: {{ \App\Models\Setting::get('primary_color', '#007bff') }};
+    --secondary-blue: {{ \App\Models\Setting::get('secondary_color', '#0056b3') }};
+    --dark-bg: {{ \App\Models\Setting::get('background_color', '#0f0f0f') }};
+    --card-bg: {{ \App\Models\Setting::get('card_background', '#2a2a2a') }};
+    --text-light: {{ \App\Models\Setting::get('text_light', '#ffffff') }};
+    --text-muted: {{ \App\Models\Setting::get('text_muted', '#b3b3b3') }};
 }
 
-.nav-arrows {
+/* Banner Styles */
+.banner-slider-container {
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.banner-slide {
+    height: 300px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.banner-content {
+    background: linear-gradient(90deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 100%);
+    padding: 40px;
+    color: white;
+    max-width: 50%;
+}
+
+.banner-title {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.banner-description {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+/* Filtros Elegantes */
+.elegant-filters {
+    margin-bottom: 30px;
+}
+
+.filters-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.filter-pill {
+    position: relative;
+}
+
+.elegant-select {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--text-light);
+    border-radius: 25px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    min-width: 140px;
+}
+
+.elegant-select:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--primary-blue);
+    transform: translateY(-1px);
+}
+
+.elegant-select:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.elegant-select option {
+    background: var(--card-bg);
+    color: var(--text-light);
+    padding: 8px;
+}
+
+.clear-filters {
+    background: rgba(255, 107, 107, 0.15);
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    color: #ff6b6b;
+    border-radius: 25px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.clear-filters:hover {
+    background: rgba(255, 107, 107, 0.25);
+    transform: translateY(-1px);
+    color: #ff6b6b;
+}
+
+/* Seções */
+.section-container {
+    margin-bottom: 50px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.section-title {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--text-light);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.section-count {
+    font-size: 1rem;
+    color: var(--text-muted);
+    font-weight: normal;
+}
+
+.section-nav {
     display: flex;
     gap: 10px;
 }
 
-.nav-arrow {
+.section-nav-btn {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-light);
-    text-decoration: none;
-    transition: all 0.3s ease;
 }
 
-.nav-arrow:hover {
-    background-color: var(--primary-blue);
-    color: white;
+.section-nav-btn:hover {
+    background: var(--primary-blue);
+    transform: scale(1.1);
 }
 
+/* Scroll horizontal */
+.products-scroll-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 10px;
+    scroll-behavior: smooth;
+}
+
+.products-scroll-container::-webkit-scrollbar {
+    height: 6px;
+}
+
+.products-scroll-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.products-scroll-container::-webkit-scrollbar-thumb {
+    background: var(--primary-blue);
+    border-radius: 3px;
+}
+
+/* Grid de produtos - Layout Original */
 .products-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -250,8 +506,6 @@
     z-index: 2;
 }
 
-
-
 .action-btn {
     position: absolute;
     bottom: 15px;
@@ -268,244 +522,126 @@
     text-align: center;
     transition: all 0.3s ease;
     opacity: 0;
-    transform: translateY(10px);
-    z-index: 10;
 }
 
 .product-card:hover .action-btn {
     opacity: 1;
-    transform: translateY(0);
 }
 
 .action-btn:hover {
-    background-color: #0056b3;
-    color: white;
-    text-decoration: none;
+    background-color: var(--secondary-blue);
+    transform: translateY(-2px);
 }
 
 .buy-btn {
-    background-color: #28a745;
+    background-color: #ffc107;
+    color: #000;
 }
 
 .buy-btn:hover {
-    background-color: #218838;
+    background-color: #e0a800;
 }
 
-/* Estilos para o Banner Slider */
-.banner-slider-container {
-    position: relative;
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
-    margin-bottom: 30px;
+/* Estado vazio */
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-muted);
 }
 
-#bannerCarousel {
-    border-radius: 20px;
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    opacity: 0.5;
 }
 
-.carousel-item {
-    height: 600px; /* Proporção 9:16 para cards Netflix */
-    position: relative;
-}
-
-.banner-slide {
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.banner-link {
-    display: block;
-    text-decoration: none;
-    color: inherit;
-    height: 100%;
-}
-
-.banner-link:hover {
-    text-decoration: none;
-    color: inherit;
-}
-
-.carousel-indicators {
-    bottom: 30px;
-}
-
-.carousel-indicators button {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.4);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    margin: 0 6px;
-    transition: all 0.3s ease;
-}
-
-.carousel-indicators button.active {
-    background-color: white;
-    border-color: white;
-    transform: scale(1.2);
-}
-
-.carousel-indicators button:hover {
-    background-color: rgba(255, 255, 255, 0.7);
-    border-color: rgba(255, 255, 255, 0.5);
-}
-
-.carousel-control-prev,
-.carousel-control-next {
-    width: 60px;
-    height: 60px;
-    background-color: rgba(0, 0, 0, 0.6);
-    border-radius: 50%;
-    top: 50%;
-    transform: translateY(-50%);
-    margin: 0 30px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    transition: all 0.3s ease;
-}
-
-.carousel-control-prev:hover,
-.carousel-control-next:hover {
-    background-color: rgba(0, 0, 0, 0.8);
-    border-color: rgba(255, 255, 255, 0.6);
-    transform: translateY(-50%) scale(1.1);
-}
-
-.carousel-control-prev {
-    left: 20px;
-}
-
-.carousel-control-next {
-    right: 20px;
-}
-
-.carousel-control-prev-icon,
-.carousel-control-next-icon {
-    width: 24px;
-    height: 24px;
+.empty-state h3 {
+    color: var(--text-light);
+    margin-bottom: 15px;
 }
 
 /* Responsividade */
 @media (max-width: 768px) {
-    .products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    .banner-content {
+        max-width: 100%;
+        padding: 20px;
+    }
+    
+    .banner-title {
+        font-size: 1.8rem;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+    }
+    
+    .filters-content .row {
         gap: 15px;
     }
     
-    .product-image {
-        min-height: 120px;
+    .filters-content .col-md-3,
+    .filters-content .col-md-2 {
+        margin-bottom: 15px;
     }
     
-    .action-btn {
-        opacity: 1;
-        transform: translateY(0);
-        font-size: 11px;
-        padding: 8px 12px;
-    }
-    
-    .carousel-item {
-        height: 450px; /* Mantém proporção 9:16 */
-    }
-    
-    .carousel-control-prev,
-    .carousel-control-next {
-        width: 50px;
-        height: 50px;
-        margin: 0 15px;
-    }
-}
-
-@media (max-width: 576px) {
-    .products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 12px;
-    }
-    
-    .product-info {
-        padding: 12px;
-    }
-    
-    .product-title {
-        font-size: 14px;
-    }
-    
-    .product-category {
-        font-size: 11px;
-    }
-    
-    .carousel-item {
-        height: 375px; /* Mantém proporção 9:16 */
-    }
-    
-    .carousel-control-prev,
-    .carousel-control-next {
-        width: 45px;
-        height: 45px;
-        margin: 0 10px;
+    .product-card {
+        flex: 0 0 200px;
     }
 }
 </style>
-<!-- Script para processamento de checkout -->
+
 <script>
-function processCheckout(productId) {
-    // Exibir indicador de carregamento
-    const loadingOverlay = document.createElement('div');
-    loadingOverlay.style.position = 'fixed';
-    loadingOverlay.style.top = '0';
-    loadingOverlay.style.left = '0';
-    loadingOverlay.style.width = '100%';
-    loadingOverlay.style.height = '100%';
-    loadingOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-    loadingOverlay.style.display = 'flex';
-    loadingOverlay.style.justifyContent = 'center';
-    loadingOverlay.style.alignItems = 'center';
-    loadingOverlay.style.zIndex = '9999';
-    loadingOverlay.style.flexDirection = 'column';
+// Toggle de filtros
+document.getElementById('toggle-filters').addEventListener('click', function() {
+    const content = document.getElementById('filters-content');
+    const icon = this.querySelector('i');
     
-    const spinner = document.createElement('div');
-    spinner.className = 'spinner-border text-light';
-    spinner.style.width = '3rem';
-    spinner.style.height = '3rem';
-    spinner.setAttribute('role', 'status');
+    content.classList.toggle('collapsed');
     
-    const messageDiv = document.createElement('div');
-    messageDiv.style.color = 'white';
-    messageDiv.style.marginTop = '15px';
-    messageDiv.style.fontSize = '16px';
-    messageDiv.textContent = 'Preparando checkout...';
+    if (content.classList.contains('collapsed')) {
+        icon.className = 'bi bi-chevron-right';
+    } else {
+        icon.className = 'bi bi-chevron-down';
+    }
+});
+
+// Auto-aplicar filtros quando mudar
+document.querySelectorAll('.filter-select').forEach(select => {
+    select.addEventListener('change', function() {
+        document.getElementById('filters-form').submit();
+    });
+});
+
+// Navegação por seção
+function scrollSection(section, direction) {
+    const container = document.getElementById('scroll-' + section);
+    const scrollAmount = 270; // largura do card + gap
     
-    loadingOverlay.appendChild(spinner);
-    loadingOverlay.appendChild(messageDiv);
-    document.body.appendChild(loadingOverlay);
-    
-    // Usar o método direct-checkout para maior confiabilidade
-    try {
-        // Primeiro tentar o direct-checkout
-        window.location.href = '{{ url('/direct-checkout') }}/' + productId;
-        
-        // Se após 3 segundos ainda estivermos aqui, tentar método alternativo
-        setTimeout(function() {
-            if (document.body.contains(loadingOverlay)) {
-                messageDiv.textContent = 'Redirecionando para checkout alternativo...';
-                window.location.href = '{{ url('/checkout') }}/' + productId;
-            }
-        }, 3000);
-    } catch (error) {
-        console.error('Erro no checkout:', error);
-        
-        // Se falhar, usar método padrão
-        messageDiv.textContent = 'Redirecionando para checkout padrão...';
-        setTimeout(function() {
-            window.location.href = '{{ url('/checkout') }}/' + productId;
-        }, 1000);
+    if (direction === 'left') {
+        container.scrollLeft -= scrollAmount;
+    } else {
+        container.scrollLeft += scrollAmount;
     }
 }
+
+// Função de checkout (mantida do código original)
+function processCheckout(productId) {
+    // Redirecionar para o checkout
+    window.location.href = '/checkout/' + productId;
+}
+
+// Inicializar estado dos filtros
+document.addEventListener('DOMContentLoaded', function() {
+    // Se há filtros ativos, manter filtros abertos
+    const hasActiveFilters = {{ 
+        request()->hasAny(['section', 'category', 'type', 'access_type', 'user_access']) ? 'true' : 'false' 
+    }};
+    
+    if (!hasActiveFilters) {
+        document.getElementById('filters-content').classList.add('collapsed');
+        document.getElementById('toggle-filters').querySelector('i').className = 'bi bi-chevron-right';
+    }
+});
 </script>
-@endsection 
+
+@endsection

@@ -7,7 +7,7 @@
     <title>@yield('title', 'Designerflix') - Área de Membros</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <link href="{{ url('/css/app.css') }}" rel="stylesheet">
     <style>
         :root {
             --primary-blue: {{ \App\Models\Setting::get('primary_color', '#007bff') }};
@@ -52,12 +52,14 @@
             margin-bottom: 30px;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 10px;
         }
 
         .logo img {
-            max-height: 40px;
-            max-width: 40px;
+            max-height: 50px;
+            max-width: 200px;
+            width: auto;
             object-fit: contain;
         }
 
@@ -1020,8 +1022,7 @@
         
         @if($logoPath)
             <div class="logo">
-                <img src="{{ Storage::url($logoPath) }}" alt="{{ $siteName }}">
-                {{ $siteName }}
+                <img src="{{ url($logoPath) }}" alt="{{ $siteName }}">
             </div>
         @else
             <div class="logo-text-only">
@@ -1168,7 +1169,7 @@
         @yield('content')
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     
     <!-- Modal de Confirmação de Exclusão -->
@@ -1260,13 +1261,17 @@
     </style>
 
     <script>
+    // Função para obter CSRF token de forma segura
+    function getCsrfToken() {
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfInput = document.querySelector('input[name="_token"]');
+        return csrfMeta?.getAttribute('content') || csrfInput?.value || '{{ csrf_token() }}';
+    }
+    
     // Função para criar e abrir modal de exclusão dinamicamente
     function confirmDelete(url, itemName = 'este item') {
-        console.log('confirmDelete chamado:', url, itemName);
-        
         // Verificar se Bootstrap está disponível
         if (typeof bootstrap === 'undefined') {
-            console.error('Bootstrap não está carregado!');
             alert('Erro: Bootstrap não está carregado. Recarregue a página.');
             return;
         }
@@ -1278,9 +1283,7 @@
         }
         
         // Obter CSRF token de forma segura
-        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-        const csrfInput = document.querySelector('input[name="_token"]');
-        const csrfToken = csrfMeta?.getAttribute('content') || csrfInput?.value || '{{ csrf_token() }}';
+        const csrfToken = getCsrfToken();
         
         console.log('CSRF Token encontrado:', csrfToken ? 'Sim' : 'Não');
         
@@ -1355,5 +1358,6 @@
         profileCard.classList.toggle('expanded');
     }
     </script>
+    
 </body>
 </html> 

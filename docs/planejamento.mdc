@@ -1,0 +1,130 @@
+---
+alwaysApply: true
+---
+
+# 📌 Análise da Plataforma
+
+Sua plataforma já conta com:
+- Produtos digitais (cursos e downloads)
+- Sistema de módulos e aulas
+- Pagamentos via Mercado Pago
+- Progresso do usuário
+- Sistema de comentários
+- Área administrativa completa
+
+---
+
+## 💡 IDEIAS ESTRATÉGICAS
+
+### 🎯 1. Gamificação e Engajamento
+- **Sistema de pontos/XP**: Ganho de pontos ao concluir aulas
+- **Badges/Conquistas**: Ex.: "Primeiro curso completo", "Maratonista (5 aulas em 1 dia)"
+- **Ranking de estudantes**: Leaderboard mensal
+- **Streaks**: Dias consecutivos estudando
+- **Certificados digitais**: PDF gerado automaticamente ao concluir cursos
+
+---
+
+### 📊 2. Analytics e Insights
+- **Dashboard do aluno**: Tempo total estudado, progresso, próximas metas
+- **Relatórios de progresso**: Gráficos de evolução semanal/mensal
+- **Recomendações inteligentes**: Baseadas no histórico do aluno
+- **Alertas de abandono**: Email após X dias sem acesso
+
+---
+
+### 💰 3. Monetização Avançada
+- **Planos de assinatura**: Mensal/anual com acesso segmentado
+- **Produtos em pré-venda**: Pagamento antes do lançamento
+- **Bundles/Pacotes**: Descontos ao comprar múltiplos produtos
+- **Cupons de desconto**: Sistema promocional
+- **Programa de afiliados**: Comissão para usuários que vendem seus produtos
+
+---
+
+### 🤝 4. Comunidade e Interação
+- **Fórum por curso**: Discussões específicas
+- **Sistema de mentoria**: Alunos avançados auxiliam iniciantes
+- **Lives/Webinars**: Integração Zoom/YouTube
+- **Grupos de estudo**: Criação de grupos temáticos
+- **Q&A com instrutor**: Sessões de perguntas e respostas
+
+---
+
+### 📱 5. Experiência Mobile-First
+- **Download offline**: Aulas disponíveis sem internet
+- **Notificações push**: Lembretes e novidades
+- **Modo escuro/claro**: Otimizado para mobile
+- **Controle de velocidade**: 0.5x até 2x
+- **Resumos de aula**: IA gera bullet points automáticos
+
+---
+
+### 🎨 6. Personalização Avançada
+- **Trilhas de aprendizado**: Caminhos sugeridos
+- **Playlist personalizada**: Sequência de aulas favoritas
+- **Notas pessoais**: Anotações sincronizadas
+- **Favoritos**: Marcar conteúdos importantes
+- **Modo foco**: Interface minimalista
+
+---
+
+### 🔄 7. Automações Inteligentes
+- **Sequência de emails**: Boas-vindas, recuperação de carrinho
+- **Liberação gradual**: Conteúdo por cronograma
+- **Backup automático**: Progresso em tempo real
+- **Relatórios automáticos**: Envio semanal de progresso
+
+---
+
+### 📈 8. Expansão de Negócio
+- **Marketplace**: Outros criadores vendem seus cursos
+- **API pública**: Integração com terceiros
+- **White label**: Vender a tecnologia para outros criadores
+- **Integração CRM**: HubSpot, RD Station
+
+---
+
+### 🛠️ 9. Ferramentas de Criação
+- **Editor de curso nativo**
+- **Templates de aula**: Modelos prontos
+- **Gravação de tela**: Integração para screencasts
+- **Quiz builder**: Questionários com correção automática
+- **AI Assistant**: IA para descrições, tags, thumbnails
+
+---
+
+### 🔐 10. Segurança e Proteção
+- **DRM para vídeos**: Proteção contra download
+- **Watermark dinâmico**: Nome do usuário sobre os vídeos
+- **Limite de dispositivos**: Até 3 por conta
+- **Detecção de compartilhamento**
+- **Two-factor authentication**
+
+---
+
+## 🚀 Roadmap de Implementação
+
+**Fase 1 (1-2 meses) — Engajamento Básico**
+- Melhorias no sistema de progresso visual
+- Certificados digitais automáticos
+- Favoritos e playlists
+- Notificações por email básicas
+
+**Fase 2 (3-4 meses) — Monetização**
+- Planos de assinatura
+- Sistema de cupons
+- Bundles de produtos
+- Dashboard de analytics básico
+
+**Fase 3 (5-6 meses) — Comunidade**
+- Fórum por curso
+- Sistema de comentários melhorado
+- Q&A com instrutor
+- Sistema de gamificação
+
+**Fase 4 (7+ meses) — Avançado**
+- Programa de afiliados
+- API pública
+- Aplicativo mobile nativo
+- IA para recomendações

@@ -15,6 +15,7 @@ class DigitalProduct extends Model
         'file_name',
         'file_size',
         'category',
+        'section',
         'product_type',
         'order',
         'is_active',
@@ -91,5 +92,20 @@ class DigitalProduct extends Model
     public function scopePaid($query)
     {
         return $query->where('is_free', false);
+    }
+
+    public function scopeBySection($query, $section)
+    {
+        return $query->where('section', $section);
+    }
+
+    public function scopeByCategory($query, $category)
+    {
+        return $query->where('category', $category);
+    }
+
+    public function scopeByType($query, $type)
+    {
+        return $query->where('product_type', $type);
     }
 }

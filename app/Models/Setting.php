@@ -70,4 +70,13 @@ namespace App\Models;
                 'mercadopago_webhook_secret' => static::get('mercadopago_webhook_secret'),
             ];
         }
+
+        public static function getGeneralSettings()
+        {
+            return [
+                'homepage_type' => static::get('homepage_type', 'login'), // 'login' ou 'custom'
+                'homepage_url' => static::get('homepage_url', ''),
+                'homepage_enabled' => static::get('homepage_enabled', '1'),
+            ];
+        }
     }

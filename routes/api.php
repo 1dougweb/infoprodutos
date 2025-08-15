@@ -31,23 +31,8 @@ Route::post('/webhook', [PaymentController::class, 'webhook'])
     ->middleware(['webhook'])
     ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
     
-// Rota de teste para webhook (sem CSRF e sem autenticação)
-Route::post('/test-webhook', [PaymentController::class, 'testWebhook'])
-    ->name('test.webhook')
-    ->middleware(['webhook'])
-    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
-    
-// Rota específica para teste de webhook do Mercado Pago (sem middleware)
-Route::post('/mp-webhook', [PaymentController::class, 'testWebhook'])
-    ->name('mp.webhook')
-    ->middleware([]);
 
-// Rota para gerar PIX (sem CSRF por estar em API)
-Route::post('/payment/generate-pix', [PaymentController::class, 'generatePixQRCode'])
-    ->name('api.payment.generate-pix');
 
-// Rota para verificar status do pagamento
-Route::post('/payment/check-status', [PaymentController::class, 'checkPaymentStatus'])
-    ->name('api.payment.check-status');
+
 
  

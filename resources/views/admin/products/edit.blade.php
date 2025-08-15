@@ -68,6 +68,18 @@ use Illuminate\Support\Facades\Storage;
                                     </div>
                                     <div class="col-md-4">
                                         <div class="mb-3">
+                                            <label for="section" class="form-label">Seção *</label>
+                                            <input type="text" class="form-control @error('section') is-invalid @enderror" 
+                                                   id="section" name="section" value="{{ old('section', $product->section ?? 'Geral') }}" 
+                                                   placeholder="Ex: Iniciantes, Avançado, Premium" required>
+                                            @error('section')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                            <div class="form-text">Seção para organizar produtos no dashboard</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
                                             <label for="product_type" class="form-label">Tipo de Produto *</label>
                                             <select class="form-control @error('product_type') is-invalid @enderror" 
                                                     id="product_type" name="product_type" required>
